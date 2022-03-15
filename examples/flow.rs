@@ -13,12 +13,12 @@ fn main() {
         "print": "prints stuff" => select!("Print what?" => {
             "yes" => "no"
             "no" => "yes"
-            "xd" => ["no", "", "back"]
+            "xd" => queue(["no", "", "back"])
             "loop": "do not." => {
                 println!("this was a mistake.");
-                ["loop"]
+                queue(["loop"])
             }
-            "quit": "quit program." => ["back", "back"]
+            "quit": "quit program." => queue(["back", "back"])
         })
     });
 

@@ -5,7 +5,7 @@ use std::{
 
 struct Context {
     // path: Vec<String>,
-    queue: Vec<&'static str>,
+    queue: Vec<String>,
 }
 
 static mut CONTEXT: Context = Context {
@@ -14,13 +14,16 @@ static mut CONTEXT: Context = Context {
 };
 
 #[cfg(debug_assertions)]
-pub fn _queue_error_check(command: &str) {
-    if !unsafe { CONTEXT.queue.is_empty() } {
-        panic!(
-            "AUTOMATION ERROR!\nLast command: {command}\nqueue: {:?}",
-            unsafe { &CONTEXT.queue }
-        );
-    }
+pub fn _something_queued() -> bool {
+    !unsafe { CONTEXT.queue.is_empty() }
+}
+
+#[cfg(debug_assertions)]
+pub fn _queue_panic(command: &str) {
+    panic!(
+        "AUTOMATION ERROR!\nLast command: {command}\nqueue: {:?}",
+        unsafe { &CONTEXT.queue }
+    );
 }
 
 pub fn get_line() -> String {
@@ -53,26 +56,18 @@ pub unsafe fn _get_line(prompt: impl Display, options: Option<&[String]>) -> Str
     )
 }
 
-pub trait Command {
-    /// internally used by the macros
-    unsafe fn _queue(self) -> bool;
-}
-
-impl Command for () {
-    unsafe fn _queue(self) -> bool {
-        false
+// TODO: macro? maybe not.
+pub fn queue<Iter, I, T>(inputs: Iter)
+where
+    Iter: IntoIterator<Item = T, IntoIter = I>,
+    I: Iterator<Item = T> + DoubleEndedIterator,
+    T: Into<String>,
+{
+    unsafe {
+        CONTEXT
+            .queue
+            .extend(inputs.into_iter().map(|x| x.into()).rev());
     }
-}
-impl<const N: usize> Command for [&'static str; N] {
-    unsafe fn _queue(self) -> bool {
-        CONTEXT.queue.extend(self.into_iter().rev());
-        true
-    }
-}
-
-#[macro_export]
-macro_rules! queue {
-    () => {};
 }
 
 #[macro_export]
@@ -125,10 +120,14 @@ macro_rules! menu {
             }),+
         ];
         loop {
+            #[cfg(debug_assertions)] {
+                // TODO: let the errors below know about this value -v
+                let queued = commander::_something_queued();
+            }
             match unsafe { commander::_get_line($message, Some(&options)) }.trim() {
                 $($option => {
-                    if !unsafe { commander::Command::_queue(commander::menu!(code $code)) }
-                        && (!$loop || $option == "back" || $option == "cancel")
+                    commander::menu!(code $code);
+                    if !$loop || $option == "back" || $option == "cancel"
                     {
                         break;
                     }
@@ -143,12 +142,18 @@ macro_rules! menu {
                     if options.is_empty() {
                         break;
                     }
-                    commander::_queue_error_check("");
+                    #[cfg(debug_assertions)] {
+                        // TODO: let this know about queued up there -^
+                        // if queued {
+                            commander::_queue_panic("");
+                        // }
+                    }
                     commander::prompt("Please choose an option.");
                 },
                 unknown_cmd => {
                     #[cfg(debug_assertions)] {
-                        commander::_queue_error_check(unknown_cmd);
+                        // TODO: this too
+                        commander::_queue_panic(unknown_cmd);
                     }
                     commander::prompt("Unrecognized command.");
                 },
