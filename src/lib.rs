@@ -122,12 +122,6 @@ macro_rules! navigator {
                             }),+
                         ];
 
-                        let mut message = $message.to_string();
-                        if !options.is_empty() {
-                            message.push_str("\n -- Options --\n");
-                            message.push_str(&options.join("\n"));
-                        };
-
                         fn error(context: &navigator::NavContext, options: &[String], last_command: &str) {
                             panic!(
                                 "AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {last_command}\nstack: {:?}\nNote: Read stack in reverse.",
@@ -135,7 +129,15 @@ macro_rules! navigator {
                             );
                         }
 
+                        let option_str = if options.is_empty() {
+                            String::new()
+                        } else {
+                            format!("\n \n -- Options --\n{}", &options.join("\n"))
+                        };
+
                         loop {
+                            let mut message = $message.to_string() + &option_str;
+
                             let (line, source) = $context.get_line(&message);
                             match line.trim() {
                                 $S($option => {
