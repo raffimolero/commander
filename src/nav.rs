@@ -19,7 +19,8 @@
 macro_rules! navigator {
     ($context:ident => $tree:block) => {
         let mut $context = navigator::context::NavContext::new();
-        macro_rules! dollar_workaround { ($S:tt) => {
+        macro_rules! dollar_workaround {
+		($S:tt) => {
 			macro_rules! nav {
 				{$message:expr => {
 					$S($option:literal $S(: $description:expr)? => $code:expr)+
@@ -88,7 +89,9 @@ macro_rules! navigator {
 					nav!(false, $message => {$S($option $S(: $description)? => $code)+})
 				};
 			}
-		}} dollar_workaround!($);
+		}
+	}
+	dollar_workaround!($);
         $tree
     };
 }
