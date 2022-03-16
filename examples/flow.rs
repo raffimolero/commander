@@ -2,37 +2,40 @@ use commander::*;
 
 fn main() {
     let x = 5;
-    prompt("Welcome to the program!");
 
-    menu!("Welcome!" => {
-        "test" => menu!("Testing." => {
+    let mut ctx = MenuContext::new();
+
+    ctx.prompt("Welcome to the program!");
+
+    menu!(ctx, "Welcome!" => {
+        "test" => menu!(ctx, "Testing." => {
             "cancel" => "ok"
             "back": "Goes back" => "Backing out..."
         })
         "" => "What?"
-        "print": "prints stuff" => select!("Print what?" => {
+        "print": "prints stuff" => select!(ctx, "Print what?" => {
             "yes" => "no"
             "no" => "yes"
-            "xd" => queue(["no", "", "back"])
+            "xd" => ctx.queue(["print", "no", "", "back"])
             "loop": "do not." => {
                 println!("this was a mistake.");
-                queue(["print", "loop"])
+                ctx.queue(["print", "loop"])
             }
-            "quit": "quit program." => queue(["back", "back"])
+            "quit": "quit program." => ctx.queue(["back", "back"])
         })
     });
 
-    menu!("Hello there" => {
+    menu!(ctx, "Hello there" => {
         "hi": format!("idk the num is {x}") => "Hello!"
         "hello": "makes response" => "Hi"
-        "say": "says stuff" => select!("What do you want me to say?" => {
+        "say": "says stuff" => select!(ctx,"What do you want me to say?" => {
             "nothing" => "ok"
             "h" => "h"
-            "a number" => {
-                // let num = input!()
-            }
+            // "a number" => {
+            //     num
+            // }
         })
     });
 
-    prompt("Goodbye!");
+    ctx.prompt("Goodbye!");
 }

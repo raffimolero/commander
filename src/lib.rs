@@ -3,27 +3,66 @@ use std::{
     io::{stdin, stdout, Write},
 };
 
-struct Context {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineSource {
+    User,
+    Queue,
+}
+
+/// Currently just stores an input queue for the menu.
+/// This allows certain menu options to input commands as if you typed them.
+pub struct MenuContext {
     // path: Vec<String>,
     queue: Vec<String>,
 }
+impl MenuContext {
+    pub fn new() -> Self {
+        Self { queue: vec![] }
+    }
 
-static mut CONTEXT: Context = Context {
-    // path: vec![],
-    queue: vec![],
-};
+    pub fn get_line(&mut self, prompt: impl Display) -> (String, LineSource) {
+        // println!("QUEUE: {:?}", CONTEXT.queue);
+        self.queue.pop().map_or_else(
+            || {
+                println!("> {prompt}");
+                let line = input_line();
+                print_bar();
+                (line, LineSource::User)
+            },
+            |line| (line.to_string(), LineSource::Queue),
+        )
+    }
 
-#[cfg(debug_assertions)]
-pub fn _something_queued() -> bool {
-    !unsafe { CONTEXT.queue.is_empty() }
+    pub fn get_queue(&self) -> &[String] {
+        &self.queue
+    }
+
+    pub fn queue<Iter, I, T>(&mut self, inputs: Iter)
+    where
+        Iter: IntoIterator<Item = T, IntoIter = I>,
+        I: Iterator<Item = T> + DoubleEndedIterator,
+        T: Into<String>,
+    {
+        self.queue
+            .extend(inputs.into_iter().map(|x| x.into()).rev());
+    }
+
+    pub fn prompt(&self, message: impl Display) {
+        println!("> {message}");
+        if self.queue.is_empty() {
+            pause();
+        }
+    }
 }
 
-#[cfg(debug_assertions)]
-pub fn _queue_panic(command: &str) {
-    panic!(
-        "AUTOMATION ERROR!\nLast command: {command}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
-        unsafe { &CONTEXT.queue }
-    );
+pub fn pause() {
+    loop {
+        println!("Press [Enter] to continue.");
+        if input_line().trim().is_empty() {
+            break;
+        }
+    }
+    print_bar();
 }
 
 /// prints a bar in the console to separate stuff.
@@ -42,80 +81,27 @@ pub fn input_line() -> String {
     line
 }
 
-pub unsafe fn _get_line(prompt: impl Display, options: &[String]) -> String {
-    // println!("QUEUE: {:?}", CONTEXT.queue);
-    CONTEXT.queue.pop().map_or_else(
-        || {
-            println!("> {prompt}");
-            if !options.is_empty() {
-                println!("  -- Options --");
-                for option in options {
-                    println!("{option}");
-                }
-            }
-            let line = input_line();
-            print_bar();
-            line
-        },
-        |line| line.to_string(),
-    )
-}
-
-// TODO: macro? maybe not.
-pub fn queue<Iter, I, T>(inputs: Iter)
-where
-    Iter: IntoIterator<Item = T, IntoIter = I>,
-    I: Iterator<Item = T> + DoubleEndedIterator,
-    T: Into<String>,
-{
-    unsafe {
-        CONTEXT
-            .queue
-            .extend(inputs.into_iter().map(|x| x.into()).rev());
-    }
-}
-
-#[macro_export]
-macro_rules! input {
-    ($message:expr => $type:ty) => {
-        println!("{}", message);
-        unsafe { commander::_get_line().trim().parse::<$type>() }
-    };
-    ($type:ty) => {
-        unsafe { commander::_get_line().trim().parse::<$type>() }
-    };
-    () => {
-        unsafe { commander::_get_line().trim().parse() }
-    };
-}
-
-pub fn prompt(message: impl Display) {
-    println!("> {message}");
-    if unsafe { CONTEXT.queue.is_empty() } {
-        loop {
-            println!("Press [Enter] to continue.");
-            if input_line().trim().is_empty() {
-                break;
-            }
-        }
-        print_bar();
-    }
-}
-
 #[macro_export]
 macro_rules! menu {
-    (code $content:literal) => {
-        commander::prompt($content);
+    (panic $context:ident, $last_command:expr) => {
+        panic!(
+            "AUTOMATION ERROR!\nLast command: {}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
+            $last_command,
+            $context.get_queue(),
+        );
     };
-    (code $code:expr) => {
+    (code $context:ident, $content:literal) => {
+        $context.prompt(format!($content));
+    };
+    (code $context:ident, $code:expr) => {
         $code
     };
-    {$message:expr => {
+    {$context:ident, $message:expr => {
         $($option:literal $(: $description:expr)? => $code:expr)+
     }} => {
-        commander::menu!(true, $message => {$($option $(: $description)? => $code)+})
+        commander::menu!($context, true, $message => {$($option $(: $description)? => $code)+})
     };
-    {$loop:literal, $message:expr => {
+    {$context:ident, $loop:literal, $message:expr => {
         $($option:literal $(: $description:expr)? => $code:expr)+
     }} => {{
         let options = vec![
@@ -125,12 +111,18 @@ macro_rules! menu {
                 format!("[{}]{desc}", $option)
             }),+
         ];
+
+        let mut message = $message.to_string();
+        if !options.is_empty() {
+            message.push_str("\n -- Options --\n");
+            message.push_str(&options.join("\n"));
+        };
+
         loop {
-            #[cfg(debug_assertions)]
-            let queued = commander::_something_queued();
-            match unsafe { commander::_get_line($message, &options) }.trim() {
+            let (line, source) = $context.get_line(&message);
+            match line.trim() {
                 $($option => {
-                    commander::menu!(code $code);
+                    commander::menu!(code $context, $code);
                     if !$loop || $option == "back" || $option == "cancel"
                     {
                         break;
@@ -138,7 +130,7 @@ macro_rules! menu {
                 })+
                 "back" => break,
                 "cancel" => {
-                    commander::prompt("Cancelled.");
+                    $context.prompt("Cancelled.");
                     break;
                 }
                 // quit must be manually implemented in case there is data that needs to be managed
@@ -147,17 +139,17 @@ macro_rules! menu {
                         break;
                     }
                     #[cfg(debug_assertions)]
-                    if queued {
-                        commander::_queue_panic("");
+                    if source == commander::LineSource::Queue {
+                        menu!(panic $context, "");
                     }
-                    commander::prompt("Please choose an option.");
+                    $context.prompt("Please choose an option.");
                 },
                 unknown_cmd => {
                     #[cfg(debug_assertions)]
-                    if queued {
-                        commander::_queue_panic(unknown_cmd);
+                    if source == commander::LineSource::Queue {
+                        menu!(panic $context, unknown_cmd);
                     }
-                    commander::prompt("Unrecognized command.");
+                    $context.prompt("Unrecognized command.");
                 },
             };
         }
@@ -166,7 +158,7 @@ macro_rules! menu {
 
 #[macro_export]
 macro_rules! select {
-    {$message:expr => {$($option:literal $(: $description:expr)? => $code:expr)+}} => {
-        commander::menu!(false, $message => {$($option $(: $description)? => $code)+})
+    {$context:ident, $message:expr => {$($option:literal $(: $description:expr)? => $code:expr)+}} => {
+        commander::menu!($context, false, $message => {$($option $(: $description)? => $code)+})
     };
 }
