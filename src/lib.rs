@@ -8,7 +8,7 @@ pub const DEFAULT_BAR_LENGTH: usize = 32;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Source {
     User,
-    Queue,
+    Stack,
 }
 
 pub struct Command {
@@ -29,7 +29,7 @@ impl NavContext {
             stack: vec![],
             last_command: Command {
                 command: String::new(),
-                source: Source::Queue,
+                source: Source::Stack,
             },
         }
     }
@@ -47,7 +47,7 @@ impl NavContext {
             },
             |line| Command {
                 command: line.to_string(),
-                source: Source::Queue,
+                source: Source::Stack,
             },
         );
         &self.last_command
@@ -177,13 +177,13 @@ macro_rules! navigator {
                                     if options.is_empty() {
                                         break;
                                     }
-                                    if *source == navigator::Source::Queue {
+                                    if *source == navigator::Source::Stack {
                                         error(&$context, &options);
                                     }
                                     $context.prompt("Please choose an option.");
                                 },
                                 unknown_cmd => {
-                                    if *source == navigator::Source::Queue {
+                                    if *source == navigator::Source::Stack {
                                         error(&$context, &options);
                                     }
                                     $context.prompt("Unrecognized command.");
