@@ -21,7 +21,7 @@ pub fn _something_queued() -> bool {
 #[cfg(debug_assertions)]
 pub fn _queue_panic(command: &str) {
     panic!(
-        "AUTOMATION ERROR!\nLast command: {command}\nqueue: {:?}",
+        "AUTOMATION ERROR!\nLast command: {command}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
         unsafe { &CONTEXT.queue }
     );
 }
@@ -120,10 +120,8 @@ macro_rules! menu {
             }),+
         ];
         loop {
-            #[cfg(debug_assertions)] {
-                // TODO: let the errors below know about this value -v
-                let queued = commander::_something_queued();
-            }
+            #[cfg(debug_assertions)]
+            let queued = commander::_something_queued();
             match unsafe { commander::_get_line($message, Some(&options)) }.trim() {
                 $($option => {
                     commander::menu!(code $code);
@@ -142,17 +140,15 @@ macro_rules! menu {
                     if options.is_empty() {
                         break;
                     }
-                    #[cfg(debug_assertions)] {
-                        // TODO: let this know about queued up there -^
-                        // if queued {
-                            commander::_queue_panic("");
-                        // }
+                    #[cfg(debug_assertions)]
+                    if queued {
+                        commander::_queue_panic("");
                     }
                     commander::prompt("Please choose an option.");
                 },
                 unknown_cmd => {
-                    #[cfg(debug_assertions)] {
-                        // TODO: this too
+                    #[cfg(debug_assertions)]
+                    if queued {
                         commander::_queue_panic(unknown_cmd);
                     }
                     commander::prompt("Unrecognized command.");

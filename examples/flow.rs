@@ -16,7 +16,7 @@ fn main() {
             "xd" => queue(["no", "", "back"])
             "loop": "do not." => {
                 println!("this was a mistake.");
-                queue(["loop"])
+                queue(["print", "loop"])
             }
             "quit": "quit program." => queue(["back", "back"])
         })
@@ -31,5 +31,5 @@ fn main() {
         })
     });
 
-    println!("Goodbye!");
+    prompt("Goodbye!");
 }
