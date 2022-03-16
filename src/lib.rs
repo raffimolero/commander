@@ -82,77 +82,88 @@ pub fn input_line() -> String {
 }
 
 #[macro_export]
-macro_rules! menu {
-    (panic $context:ident, $last_command:expr) => {
-        panic!(
-            "AUTOMATION ERROR!\nLast command: {}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
-            $last_command,
-            $context.get_queue(),
-        );
-    };
-    {$context:ident, $message:expr => {
-        $($option:literal $(: $description:expr)? => $code:expr)+
-    }} => {
-        commander::menu!($context, true, $message => {$($option $(: $description)? => $code)+})
-    };
-    {$context:ident, $loop:literal, $message:expr => {
-        $($option:literal $(: $description:expr)? => $code:expr)+
-    }} => {{
-        let options = vec![
-            $({
-                let mut desc = String::new();
-                $(desc = format!(": {}", $description);)?
-                format!("[{}]{desc}", $option)
-            }),+
-        ];
+macro_rules! commander {
+    ($context:ident => $tree:block) => {
+        let mut $context = commander::MenuContext::new();
+        macro_rules! dollar_workaround {
+            ($S:tt) => {
+                macro_rules! menu {
+                    (panic $last_command:expr) => {
+                        panic!(
+                            "AUTOMATION ERROR!\nLast command: {}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
+                            $last_command,
+                            $context.get_queue(),
+                        );
+                    };
+                    {$message:expr => {
+                        $S($option:literal $S(: $description:expr)? => $code:expr)+
+                    }} => {
+                        menu!(true, $message => {$S($option $S(: $description)? => $code)+})
+                    };
+                    {$loop:literal, $message:expr => {
+                        $S($option:literal $S(: $description:expr)? => $code:expr)+
+                    }} => {{
+                        let options = vec![
+                            $S({
+                                let mut desc = String::new();
+                                $S(desc = format!(": {}", $description);)?
+                                format!("[{}]{desc}", $option)
+                            }),+
+                        ];
 
-        let mut message = $message.to_string();
-        if !options.is_empty() {
-            message.push_str("\n -- Options --\n");
-            message.push_str(&options.join("\n"));
-        };
+                        let mut message = $message.to_string();
+                        if !options.is_empty() {
+                            message.push_str("\n -- Options --\n");
+                            message.push_str(&options.join("\n"));
+                        };
 
-        loop {
-            let (line, source) = $context.get_line(&message);
-            match line.trim() {
-                $($option => {
-                    let _: () = $code;
-                    if !$loop || $option == "back" || $option == "cancel"
-                    {
-                        break;
-                    }
-                })+
-                "back" => break,
-                "cancel" => {
-                    $context.prompt("Cancelled.");
-                    break;
+                        loop {
+                            let (line, source) = $context.get_line(&message);
+                            match line.trim() {
+                                $S($option => {
+                                    let _: () = $code;
+                                    if !$loop || $option == "back" || $option == "cancel"
+                                    {
+                                        break;
+                                    }
+                                })+
+                                "back" => break,
+                                "cancel" => {
+                                    $context.prompt("Cancelled.");
+                                    break;
+                                }
+                                // quit must be manually implemented in case there is data that needs to be managed
+                                "" => {
+                                    if options.is_empty() {
+                                        break;
+                                    }
+                                    #[cfg(debug_assertions)]
+                                    if source == commander::LineSource::Queue {
+                                        menu!(panic "");
+                                    }
+                                    $context.prompt("Please choose an option.");
+                                },
+                                unknown_cmd => {
+                                    #[cfg(debug_assertions)]
+                                    if source == commander::LineSource::Queue {
+                                        menu!(panic unknown_cmd);
+                                    }
+                                    $context.prompt("Unrecognized command.");
+                                },
+                            };
+                        }
+                    }};
                 }
-                // quit must be manually implemented in case there is data that needs to be managed
-                "" => {
-                    if options.is_empty() {
-                        break;
-                    }
-                    #[cfg(debug_assertions)]
-                    if source == commander::LineSource::Queue {
-                        menu!(panic $context, "");
-                    }
-                    $context.prompt("Please choose an option.");
-                },
-                unknown_cmd => {
-                    #[cfg(debug_assertions)]
-                    if source == commander::LineSource::Queue {
-                        menu!(panic $context, unknown_cmd);
-                    }
-                    $context.prompt("Unrecognized command.");
-                },
-            };
-        }
-    }};
-}
 
-#[macro_export]
-macro_rules! select {
-    {$context:ident, $message:expr => {$($option:literal $(: $description:expr)? => $code:expr)+}} => {
-        commander::menu!($context, false, $message => {$($option $(: $description)? => $code)+})
+                macro_rules! pick {
+                    {$message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}} => {
+                        menu!(false, $message => {$S($option $S(: $description)? => $code)+})
+                    };
+                }
+
+                $tree
+            }
+        };
+        dollar_workaround!($);
     };
 }
