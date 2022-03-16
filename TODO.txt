@@ -1,2 +1,0 @@
-- insist on input, or cancel
-- macro defining macro
