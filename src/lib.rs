@@ -164,7 +164,7 @@ macro_rules! commander {
                 }
             }
         };
-        $tree
         dollar_workaround!($);
+        $tree
     };
 }
