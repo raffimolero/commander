@@ -26,8 +26,15 @@ pub fn _queue_panic(command: &str) {
     );
 }
 
-pub fn get_line() -> String {
+/// prints a bar in the console to separate stuff.
+pub fn print_bar() {
+    const BAR_LENGTH: usize = 32;
+    println!("{}\n", "_".repeat(BAR_LENGTH));
+}
+
+pub fn input_line() -> String {
     let mut line = String::new();
+    print!("=> ");
     stdout().flush().expect("Couldn't flush stdout.");
     stdin()
         .read_line(&mut line)
@@ -35,21 +42,19 @@ pub fn get_line() -> String {
     line
 }
 
-pub unsafe fn _get_line(prompt: impl Display, options: Option<&[String]>) -> String {
+pub unsafe fn _get_line(prompt: impl Display, options: &[String]) -> String {
     // println!("QUEUE: {:?}", CONTEXT.queue);
     CONTEXT.queue.pop().map_or_else(
         || {
             println!("> {prompt}");
-            if let Some(options) = options {
-                if !options.is_empty() {
-                    println!("  -- Options --");
-                    for option in options {
-                        println!("{option}");
-                    }
+            if !options.is_empty() {
+                println!("  -- Options --");
+                for option in options {
+                    println!("{option}");
                 }
             }
-            let line = get_line();
-            println!();
+            let line = input_line();
+            print_bar();
             line
         },
         |line| line.to_string(),
@@ -89,10 +94,11 @@ pub fn prompt(message: impl Display) {
     if unsafe { CONTEXT.queue.is_empty() } {
         loop {
             println!("Press [Enter] to continue.");
-            if get_line().trim().is_empty() {
+            if input_line().trim().is_empty() {
                 break;
             }
         }
+        print_bar();
     }
 }
 
@@ -122,7 +128,7 @@ macro_rules! menu {
         loop {
             #[cfg(debug_assertions)]
             let queued = commander::_something_queued();
-            match unsafe { commander::_get_line($message, Some(&options)) }.trim() {
+            match unsafe { commander::_get_line($message, &options) }.trim() {
                 $($option => {
                     commander::menu!(code $code);
                     if !$loop || $option == "back" || $option == "cancel"

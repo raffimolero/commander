@@ -28,6 +28,9 @@ fn main() {
         "say": "says stuff" => select!("What do you want me to say?" => {
             "nothing" => "ok"
             "h" => "h"
+            "a number" => {
+                // let num = input!()
+            }
         })
     });
 
