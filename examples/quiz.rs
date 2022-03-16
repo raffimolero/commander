@@ -62,7 +62,8 @@ fn main() {
         let mut taken = false;
         nav!(format!("Would you like to take the quiz{}?", if taken { " again" } else { "" }) => {
             "yes" => {
-                taken = true;
+
+                let mut canceled = false;
                 pick!("How would you like to take the quiz?" => {
                     "manual" => ctx.prompt("Very well.")
                     "walkthrough": "Automatically answers the quiz for you." => {
@@ -72,28 +73,36 @@ fn main() {
                     }
                     // just "\n" will print the prompts, but you won't pause the program.
                     "a": "Answers 'a' for every question." => ctx.execute(["a\n", "a\n", "a\n", "a\n", "a\n"])
+                    "back": "Cancels the quiz." => {
+                        canceled = true;
+                        ctx.prompt("Cancelled.");
+                    }
                 });
-                let mut score = 0;
-                for Question { question, choices: [a, b, c, d], answer } in test.iter() {
-                    let mut check_answer = |choice| {
-                        if choice == *answer {
-                            score += 1;
-                            "Correct!"
-                        } else {
-                            "Wrong."
-                        }
-                    };
-                    pick!(question => {
-                        "a": a => ctx.prompt(check_answer("a"))
-                        "b": b => ctx.prompt(check_answer("b"))
-                        "c": c => ctx.prompt(check_answer("c"))
-                        "d": d => ctx.prompt(check_answer("d"))
-                    });
+
+                if !canceled {
+                    taken = true;
+                    let mut score = 0;
+                    for Question { question, choices: [a, b, c, d], answer } in test.iter() {
+                        let mut check_answer = |choice| {
+                            if choice == *answer {
+                                score += 1;
+                                "Correct!"
+                            } else {
+                                "Wrong."
+                            }
+                        };
+                        pick!(question => {
+                            "a": a => ctx.prompt(check_answer("a"))
+                            "b": b => ctx.prompt(check_answer("b"))
+                            "c": c => ctx.prompt(check_answer("c"))
+                            "d": d => ctx.prompt(check_answer("d"))
+                        });
+                    }
+                    ctx.prompt(format!("Quiz finished!\nYou got {score} out of 5 questions right."));
                 }
-                ctx.prompt(format!("Quiz finished!\nYou got {score} out of 5 questions right."));
             }
             // the "\n." with a period will tell the program to pause on prompts, and it won't show the command.
-            "no": "Exits the program." => ctx.execute(["back\n."])
+            "no": "Exits the program." => ctx.execute(["break\n."])
         });
         ctx.prompt("Goodbye!");
     });

@@ -192,9 +192,9 @@ pub fn input_line(cue: &str) -> String {
 /// ```
 ///
 /// `nav!`: Works exactly like `pick!`, but instead of moving on, it loops and asks a possibly dynamically generated question forever.
-/// To exit a nav, the user must type "back".
+/// To exit a nav, the user must type "break".
 ///
-/// **Note: You can customize the "back" option to do whatever you want.** Just note that it will immediately queue a *back command* before any of yours.
+/// **Note: You can customize the "break" option to do whatever you want.** Just note that it will immediately queue a *break command* before any of yours.
 #[macro_export]
 macro_rules! navigator {
     ($context:ident => $tree:block) => {
@@ -238,11 +238,11 @@ macro_rules! navigator {
 						match command.trim() {
 							$S($option => {
 								let _: () = $code;
-								if !$loop || $option == "back" {
+								if !$loop || $option == "break" {
 									break;
 								}
 							})+
-							"back" => break,
+							"break" => break,
 							"" => {
 								if options.is_empty() {
 									break;
