@@ -90,12 +90,6 @@ macro_rules! menu {
             $context.get_queue(),
         );
     };
-    (code $context:ident, $content:literal) => {
-        $context.prompt(format!($content));
-    };
-    (code $context:ident, $code:expr) => {
-        $code
-    };
     {$context:ident, $message:expr => {
         $($option:literal $(: $description:expr)? => $code:expr)+
     }} => {
@@ -122,7 +116,7 @@ macro_rules! menu {
             let (line, source) = $context.get_line(&message);
             match line.trim() {
                 $($option => {
-                    commander::menu!(code $context, $code);
+                    let _: () = $code;
                     if !$loop || $option == "back" || $option == "cancel"
                     {
                         break;

@@ -9,13 +9,13 @@ fn main() {
 
     menu!(ctx, "Welcome!" => {
         "test" => menu!(ctx, "Testing." => {
-            "cancel" => "ok"
-            "back": "Goes back" => "Backing out..."
+            "cancel" => ctx.prompt("ok")
+            "back": "Goes back" => ctx.prompt("Backing out...")
         })
-        "" => "What?"
+        "" => ctx.prompt("What?")
         "print": "prints stuff" => select!(ctx, "Print what?" => {
-            "yes" => "no"
-            "no" => "yes"
+            "yes" => ctx.prompt("no")
+            "no" => ctx.prompt("yes")
             "xd" => ctx.queue(["print", "no", "", "back"])
             "loop": "do not." => {
                 println!("this was a mistake.");
@@ -26,14 +26,15 @@ fn main() {
     });
 
     menu!(ctx, "Hello there" => {
-        "hi": format!("idk the num is {x}") => "Hello!"
-        "hello": "makes response" => "Hi"
+        "hi": format!("idk the num is {x}") => ctx.prompt("Hello!")
+        "hello": "makes response" => ctx.prompt("Hi")
         "say": "says stuff" => select!(ctx,"What do you want me to say?" => {
-            "nothing" => "ok"
-            "h" => "h"
-            // "a number" => {
-            //     num
-            // }
+            "nothing" => ctx.prompt("ok")
+            "h" => ctx.prompt("h")
+            "a number" => {
+                let num = ctx.get_line("Enter a number.").0.trim().parse::<i32>().expect("whoopsie, no error handling :P");
+                ctx.prompt(num);
+            }
         })
     });
 
