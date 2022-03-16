@@ -1,11 +1,9 @@
-use commander::*;
-
 fn main() {
     let x = 5;
 
-    commander!(ctx => {
+    navigator::navigator!(ctx => {
         pick!("pick one" => {
-            "auto" => ctx.queue(["a", "c", "b"])
+            "auto" => ctx.execute(["a", "c", "b"])
         });
 
         pick!("pick one" => {
@@ -24,8 +22,8 @@ fn main() {
             "c" => ctx.prompt("c")
         });
 
-        menu!("Welcome!" => {
-            "test" => menu!("Testing." => {
+        nav!("Welcome!" => {
+            "test" => nav!("Testing." => {
                 "cancel" => ctx.prompt("ok")
                 "back": "Goes back" => ctx.prompt("Backing out...")
             })
@@ -33,16 +31,16 @@ fn main() {
             "print": "prints stuff" => pick!("Print what?" => {
                 "yes" => ctx.prompt("no")
                 "no" => ctx.prompt("yes")
-                "xd" => ctx.queue(["print", "no", "", "back"])
+                "xd" => ctx.execute(["print", "no", "", "back"])
                 "loop": "do not." => {
                     ctx.prompt("you will never escape.");
-                    ctx.queue(["print", "loop"]);
+                    ctx.execute(["print", "loop"]);
                 }
-                "quit": "quit program." => ctx.queue(["back", "back"])
+                "quit": "quit program." => ctx.execute(["back", "back"])
             })
         });
 
-        menu!("Hello there" => {
+        nav!("Hello there" => {
             "hi": format!("idk the num is {x}") => ctx.prompt("Hello!")
             "hello": "makes response" => ctx.prompt("Hi")
             "general kenobi": "reference" => ctx.prompt("i don't remember how the rest of the meme goes")
