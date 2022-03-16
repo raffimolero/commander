@@ -48,7 +48,9 @@ impl MenuContext {
     }
 
     pub fn prompt(&self, message: impl Display) {
-        println!("> {message}");
+        for line in message.to_string().split('\n') {
+            println!("> {line}");
+        }
         if self.queue.is_empty() {
             pause();
         }
@@ -160,10 +162,9 @@ macro_rules! commander {
                         menu!(false, $message => {$S($option $S(: $description)? => $code)+})
                     };
                 }
-
-                $tree
             }
         };
+        $tree
         dollar_workaround!($);
     };
 }
