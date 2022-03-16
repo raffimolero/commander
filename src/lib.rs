@@ -13,16 +13,16 @@ pub enum LineSource {
 /// This allows certain menu options to input commands as if you typed them.
 pub struct MenuContext {
     // path: Vec<String>,
-    queue: Vec<String>,
+    pub stack: Vec<String>,
 }
 impl MenuContext {
     pub fn new() -> Self {
-        Self { queue: vec![] }
+        Self { stack: vec![] }
     }
 
     pub fn get_line(&mut self, prompt: impl Display) -> (String, LineSource) {
         // println!("QUEUE: {:?}", CONTEXT.queue);
-        self.queue.pop().map_or_else(
+        self.stack.pop().map_or_else(
             || {
                 println!("> {prompt}");
                 let line = input_line();
@@ -33,17 +33,17 @@ impl MenuContext {
         )
     }
 
-    pub fn get_queue(&self) -> &[String] {
-        &self.queue
+    pub fn get_stack(&self) -> &[String] {
+        &self.stack
     }
 
-    pub fn queue<Iter, I, T>(&mut self, inputs: Iter)
+    pub fn execute<Iter, I, T>(&mut self, inputs: Iter)
     where
         Iter: IntoIterator<Item = T, IntoIter = I>,
         I: Iterator<Item = T> + DoubleEndedIterator,
         T: Into<String>,
     {
-        self.queue
+        self.stack
             .extend(inputs.into_iter().map(|x| x.into()).rev());
     }
 
@@ -51,7 +51,7 @@ impl MenuContext {
         for line in message.to_string().split('\n') {
             println!("> {line}");
         }
-        if self.queue.is_empty() {
+        if self.stack.is_empty() {
             pause();
         }
     }
@@ -92,9 +92,9 @@ macro_rules! commander {
                 macro_rules! menu {
                     (panic $last_command:expr) => {
                         panic!(
-                            "AUTOMATION ERROR!\nLast command: {}\nqueue: {:?}\nNote: The queue is a stack. Read it in reverse.",
+                            "AUTOMATION ERROR!\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
                             $last_command,
-                            $context.get_queue(),
+                            $context.stack,
                         );
                     };
                     {$message:expr => {

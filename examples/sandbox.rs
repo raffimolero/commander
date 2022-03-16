@@ -5,7 +5,7 @@ fn main() {
 
     commander!(ctx => {
         pick!("pick one" => {
-            "auto" => ctx.queue(["a", "c", "b"])
+            "auto" => ctx.execute(["a", "c", "b"])
         });
 
         pick!("pick one" => {
@@ -33,12 +33,12 @@ fn main() {
             "print": "prints stuff" => pick!("Print what?" => {
                 "yes" => ctx.prompt("no")
                 "no" => ctx.prompt("yes")
-                "xd" => ctx.queue(["print", "no", "", "back"])
+                "xd" => ctx.execute(["print", "no", "", "back"])
                 "loop": "do not." => {
                     ctx.prompt("you will never escape.");
-                    ctx.queue(["print", "loop"]);
+                    ctx.execute(["print", "loop"]);
                 }
-                "quit": "quit program." => ctx.queue(["back", "back"])
+                "quit": "quit program." => ctx.execute(["back", "back"])
             })
         });
 

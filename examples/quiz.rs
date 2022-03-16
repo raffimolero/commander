@@ -26,8 +26,8 @@ fn main() {
 
         pick!("Would you like to take the quiz?" => {
             "yes" => ctx.prompt("Very well.")
-            "no": "Automatically answers the quiz for you." => ctx.queue(answers)
-            "a": "Answers 'a' for every question." => ctx.queue(["a", "a", "a", "a", "a"])
+            "no": "Automatically answers the quiz for you." => ctx.execute(answers)
+            "a": "Answers 'a' for every question." => ctx.execute(["a", "a", "a", "a", "a"])
         });
 
         let mut score = 0;
