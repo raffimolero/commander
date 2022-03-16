@@ -1,2 +1,12 @@
-- insist on input, or cancel
-- macro defining macro
+- actual homework.
+- d o c u m e n t a t i o n
+- refactor the helpers.
+    * find all the instances of print_bar and see if they can be simplified.
+- get user input, not just user choices.
+    * insist on input, or cancel.
+- more customizable nav
+    * loop on/off?
+        * may be bad. forgetting to specify loop, or specifying wrong, is harder to see than `nav` vs `pick`.
+    * *colors*
+    * -- [ options header ] --
+    * [option format]
