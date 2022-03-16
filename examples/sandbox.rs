@@ -1,3 +1,5 @@
+///! This is a place for me to mess around. Good luck understanding it :P
+
 fn main() {
     let x = 5;
 
@@ -31,12 +33,12 @@ fn main() {
             "print": "prints stuff" => pick!("Print what?" => {
                 "yes" => ctx.prompt("no")
                 "no" => ctx.prompt("yes")
-                "xd" => ctx.execute(["print", "no", "", "back"])
+                "xd" => ctx.execute(["print", "no", "", "break"])
                 "loop": "do not." => {
                     ctx.prompt("you will never escape.");
                     ctx.execute(["print", "loop"]);
                 }
-                "quit": "quit program." => ctx.execute(["back", "back"])
+                "quit": "quit program." => ctx.execute(["break", "break"])
             })
         });
 
