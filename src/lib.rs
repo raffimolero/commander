@@ -3,6 +3,8 @@ use std::{
     io::{stdin, stdout, Write},
 };
 
+pub const DEFAULT_BAR_LENGTH: usize = 32;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineSource {
     User,
@@ -11,22 +13,21 @@ pub enum LineSource {
 
 /// Currently just stores an input queue for the menu.
 /// This allows certain menu options to input commands as if you typed them.
-pub struct MenuContext {
+pub struct NavContext {
     // path: Vec<String>,
     pub stack: Vec<String>,
 }
-impl MenuContext {
+impl NavContext {
     pub fn new() -> Self {
         Self { stack: vec![] }
     }
 
     pub fn get_line(&mut self, prompt: impl Display) -> (String, LineSource) {
-        // println!("QUEUE: {:?}", CONTEXT.queue);
         self.stack.pop().map_or_else(
             || {
                 println!("> {prompt}");
                 let line = input_line();
-                print_bar();
+                print_bar(DEFAULT_BAR_LENGTH);
                 (line, LineSource::User)
             },
             |line| (line.to_string(), LineSource::Queue),
@@ -57,6 +58,7 @@ impl MenuContext {
     }
 }
 
+/// Pauses the program to ask for the user's input.
 pub fn pause() {
     loop {
         println!("Press [Enter] to continue.");
@@ -64,15 +66,17 @@ pub fn pause() {
             break;
         }
     }
-    print_bar();
+    print_bar(DEFAULT_BAR_LENGTH);
 }
 
-/// prints a bar in the console to separate stuff.
-pub fn print_bar() {
-    const BAR_LENGTH: usize = 32;
-    println!("{}\n", "_".repeat(BAR_LENGTH));
+/// Prints a separator bar in the console.
+pub fn print_bar(length: usize) {
+    println!("{}\n", "_".repeat(length));
 }
 
+/// Takes input directly from user.
+///
+/// If you want to be able to programmatically queue inputs, use `NavContext.get_line()`.
 pub fn input_line() -> String {
     let mut line = String::new();
     print!("=> ");
@@ -83,24 +87,29 @@ pub fn input_line() -> String {
     line
 }
 
+/// The heart of the crate.
+///
+/// This macro will create a new menu context and *automagically* give you the other core macros which bind to this context:
+///
+/// `pick!`: Asks
+/// ```
+/// // Just like menu, but it doesn't loop.
+/// pick!("message" => {
+///     "option 1" => "action 1"
+///     "option 2": "description" => "action 2"
+/// });
+/// ```
 #[macro_export]
-macro_rules! commander {
+macro_rules! navigator {
     ($context:ident => $tree:block) => {
-        let mut $context = commander::MenuContext::new();
+        let mut $context = navigator::NavContext::new();
         macro_rules! dollar_workaround {
             ($S:tt) => {
-                macro_rules! menu {
-                    (panic $last_command:expr) => {
-                        panic!(
-                            "AUTOMATION ERROR!\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
-                            $last_command,
-                            $context.stack,
-                        );
-                    };
+                macro_rules! nav {
                     {$message:expr => {
                         $S($option:literal $S(: $description:expr)? => $code:expr)+
                     }} => {
-                        menu!(true, $message => {$S($option $S(: $description)? => $code)+})
+                        nav!(true, $message => {$S($option $S(: $description)? => $code)+})
                     };
                     {$loop:literal, $message:expr => {
                         $S($option:literal $S(: $description:expr)? => $code:expr)+
@@ -119,36 +128,36 @@ macro_rules! commander {
                             message.push_str(&options.join("\n"));
                         };
 
+                        fn error(context: &navigator::NavContext, options: &[String], last_command: &str) {
+                            panic!(
+                                "AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {last_command}\nstack: {:?}\nNote: Read stack in reverse.",
+                                context.stack,
+                            );
+                        }
+
                         loop {
                             let (line, source) = $context.get_line(&message);
                             match line.trim() {
                                 $S($option => {
                                     let _: () = $code;
-                                    if !$loop || $option == "back" || $option == "cancel"
-                                    {
+                                    if !$loop || $option == "back" {
                                         break;
                                     }
                                 })+
                                 "back" => break,
-                                "cancel" => {
-                                    $context.prompt("Cancelled.");
-                                    break;
-                                }
-                                // quit must be manually implemented in case there is data that needs to be managed
+                                // quit must be manually implemented in case there is data that needs to be managed.
                                 "" => {
                                     if options.is_empty() {
                                         break;
                                     }
-                                    #[cfg(debug_assertions)]
-                                    if source == commander::LineSource::Queue {
-                                        menu!(panic "");
+                                    if source == navigator::LineSource::Queue {
+                                        error(&$context, &options, "");
                                     }
                                     $context.prompt("Please choose an option.");
                                 },
                                 unknown_cmd => {
-                                    #[cfg(debug_assertions)]
-                                    if source == commander::LineSource::Queue {
-                                        menu!(panic unknown_cmd);
+                                    if source == navigator::LineSource::Queue {
+                                        error(&$context, &options, unknown_cmd);
                                     }
                                     $context.prompt("Unrecognized command.");
                                 },
@@ -159,7 +168,7 @@ macro_rules! commander {
 
                 macro_rules! pick {
                     {$message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}} => {
-                        menu!(false, $message => {$S($option $S(: $description)? => $code)+})
+                        nav!(false, $message => {$S($option $S(: $description)? => $code)+})
                     };
                 }
             }

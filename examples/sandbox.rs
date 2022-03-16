@@ -1,9 +1,7 @@
-use commander::*;
-
 fn main() {
     let x = 5;
 
-    commander!(ctx => {
+    navigator::navigator!(ctx => {
         pick!("pick one" => {
             "auto" => ctx.execute(["a", "c", "b"])
         });
@@ -24,8 +22,8 @@ fn main() {
             "c" => ctx.prompt("c")
         });
 
-        menu!("Welcome!" => {
-            "test" => menu!("Testing." => {
+        nav!("Welcome!" => {
+            "test" => nav!("Testing." => {
                 "cancel" => ctx.prompt("ok")
                 "back": "Goes back" => ctx.prompt("Backing out...")
             })
@@ -42,7 +40,7 @@ fn main() {
             })
         });
 
-        menu!("Hello there" => {
+        nav!("Hello there" => {
             "hi": format!("idk the num is {x}") => ctx.prompt("Hello!")
             "hello": "makes response" => ctx.prompt("Hi")
             "general kenobi": "reference" => ctx.prompt("i don't remember how the rest of the meme goes")
