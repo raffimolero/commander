@@ -127,80 +127,77 @@ pub fn input_line() -> String {
 macro_rules! navigator {
     ($context:ident => $tree:block) => {
         let mut $context = navigator::NavContext::new();
-        macro_rules! dollar_workaround {
-            ($S:tt) => {
-                macro_rules! nav {
-                    {$message:expr => {
-                        $S($option:literal $S(: $description:expr)? => $code:expr)+
-                    }} => {
-                        nav!(true, $message => {$S($option $S(: $description)? => $code)+})
-                    };
-                    {$loop:literal, $message:expr => {
-                        $S($option:literal $S(: $description:expr)? => $code:expr)+
-                    }} => {{
-                        let options = vec![
-                            $S({
-                                let mut desc = String::new();
-                                $S(desc = format!(": {}", $description);)?
-                                format!("[{}]{desc}", $option)
-                            }),+
-                        ];
+        macro_rules! dollar_workaround { ($S:tt) => {
+			macro_rules! nav {
+				{$message:expr => {
+					$S($option:literal $S(: $description:expr)? => $code:expr)+
+				}} => {
+					nav!(true, $message => {$S($option $S(: $description)? => $code)+})
+				};
+				{$loop:literal, $message:expr => {
+					$S($option:literal $S(: $description:expr)? => $code:expr)+
+				}} => {{
+					let options = vec![
+						$S({
+							let mut desc = String::new();
+							$S(desc = format!(": {}", $description);)?
+							format!("[{}]{desc}", $option)
+						}),+
+					];
 
-                        fn error(context: &navigator::NavContext, options: &[String]) {
-                            panic!(
-                                "AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
-								context.last_command.command,
-                                context.stack,
-                            );
-                        }
+					fn error(context: &navigator::NavContext, options: &[String]) {
+						panic!(
+							"AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
+							context.last_command.command,
+							context.stack,
+						);
+					}
 
-                        let option_str = if options.is_empty() {
-                            String::new()
-                        } else {
-                            format!("\n \n -- Options --\n{}", &options.join("\n"))
-                        };
+					let option_str = if options.is_empty() {
+						String::new()
+					} else {
+						format!("\n \n -- Options --\n{}", &options.join("\n"))
+					};
 
-                        loop {
-                            let mut message = $message.to_string() + &option_str;
+					loop {
+						let mut message = $message.to_string() + &option_str;
 
-                            let navigator::Command { command, source } = $context.next_command(&message);
-                            match command.trim() {
-                                $S($option => {
-                                    let _: () = $code;
-                                    if !$loop || $option == "back" {
-                                        break;
-                                    }
-                                })+
-                                "back" => break,
-                                // quit must be manually implemented in case there is data that needs to be managed.
-                                "" => {
-                                    if options.is_empty() {
-                                        break;
-                                    }
-                                    if *source == navigator::Source::Stack {
-                                        error(&$context, &options);
-                                    }
-                                    $context.prompt("Please choose an option.");
-                                },
-                                unknown_cmd => {
-                                    if *source == navigator::Source::Stack {
-                                        error(&$context, &options);
-                                    }
-                                    $context.prompt("Unrecognized command.");
-                                },
-                            };
-                        }
-                    }};
-                }
+						let navigator::Command { command, source } = $context.next_command(&message);
+						match command.trim() {
+							$S($option => {
+								let _: () = $code;
+								if !$loop || $option == "back" {
+									break;
+								}
+							})+
+							"back" => break,
+							// quit must be manually implemented in case there is data that needs to be managed.
+							"" => {
+								if options.is_empty() {
+									break;
+								}
+								if *source == navigator::Source::Stack {
+									error(&$context, &options);
+								}
+								$context.prompt("Please choose an option.");
+							},
+							unknown_cmd => {
+								if *source == navigator::Source::Stack {
+									error(&$context, &options);
+								}
+								$context.prompt("Unrecognized command.");
+							},
+						};
+					}
+				}};
+			}
 
-                macro_rules! pick {
-                    {$message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}} => {
-                        nav!(false, $message => {$S($option $S(: $description)? => $code)+})
-                    };
-                }
-            }
-        };
-        dollar_workaround!($);
+			macro_rules! pick {
+				{$message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}} => {
+					nav!(false, $message => {$S($option $S(: $description)? => $code)+})
+				};
+			}
+		}}; dollar_workaround!($);
         $tree
     };
 }
