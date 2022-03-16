@@ -9,27 +9,52 @@ fn main() {
         let test = [
             Question {
                 question: "What is the first letter of the alphabet?",
-                choices: ["a", "b", "c", "d"],
+                choices: [
+                    "a",
+                    "b",
+                    "c",
+                    "d"
+                ],
                 answer: "a",
             },
             Question {
                 question: "What is your favorite programming language?",
-                choices: ["Malbolge", "Rust", "HTML", "I don't code"],
+                choices: [
+                    "Malbolge",
+                    "Rust",
+                    "HTML",
+                    "I don't code",
+                ],
                 answer: "b",
             },
             Question {
                 question: "Hello there!",
-                choices: ["Hello!", "Hi!", "Hey!", "General Kenobi."],
+                choices: [
+                    "Hello!",
+                    "Hi!",
+                    "Hey!",
+                    "General Kenobi.",
+                ],
                 answer: "d",
             },
             Question {
                 question: "What sound does a duck make?",
-                choices: ["Quack", "Beep", "Ducks aren't real", "We have your semicolon key hostage. Do as we say or face the consequences."],
+                choices: [
+                    "Quack",
+                    "Beep",
+                    "Ducks aren't real",
+                    "We have your semicolon key hostage. Do as we say or face the consequences."
+                ],
                 answer: "a",
             },
             Question {
                 question: "What happened on the 16th of March, 2022?",
-                choices: ["Nothing significant", "The Earth rotated", "The creator of this crate accidentally checked out a branch while in a detached head, and had to write this entire quiz again", "Ducks aren't real"],
+                choices: [
+                    "Nothing significant",
+                    "The Earth rotated",
+                    "The creator of this crate accidentally checked out a branch while in a detached head, and had to rewrite this entire quiz all over again",
+                    "Ducks still aren't real"
+                ],
                 answer: "c",
             },
         ];
@@ -40,11 +65,13 @@ fn main() {
                 taken = true;
                 pick!("How would you like to take the quiz?" => {
                     "manual" => ctx.prompt("Very well.")
-                    "auto": "Automatically answers the quiz for you." => {
+                    "walkthrough": "Automatically answers the quiz for you." => {
                         // we're just going to steal the answers from each item...
-                        ctx.execute(test.iter().map(|question| question.answer))
+                        // the "\n?" tells the program to let you see the input, and even override it if you want.
+                        ctx.execute(test.iter().map(|question| question.answer.to_owned() + "\n?"))
                     }
-                    "a": "Answers 'a' for every question." => ctx.execute(["a", "a", "a", "a", "a"])
+                    // just "\n" will print the prompts, but you won't pause the program.
+                    "a": "Answers 'a' for every question." => ctx.execute(["a\n", "a\n", "a\n", "a\n", "a\n"])
                 });
                 let mut score = 0;
                 for Question { question, choices: [a, b, c, d], answer } in test.iter() {
@@ -65,7 +92,8 @@ fn main() {
                 }
                 ctx.prompt(format!("Quiz finished!\nYou got {score} out of 5 questions right."));
             }
-            "no": "Exits the program." => ctx.execute(["back"])
+            // the "\n." with a period will tell the program to pause on prompts, and it won't show the command.
+            "no": "Exits the program." => ctx.execute(["back\n."])
         });
         ctx.prompt("Goodbye!");
     });
