@@ -6,9 +6,14 @@ use std::{
 pub const DEFAULT_BAR_LENGTH: usize = 32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LineSource {
+pub enum Source {
     User,
     Queue,
+}
+
+pub struct Command {
+    pub command: String,
+    pub source: Source,
 }
 
 /// Currently just stores an input queue for the menu.
@@ -16,22 +21,36 @@ pub enum LineSource {
 pub struct NavContext {
     // path: Vec<String>,
     pub stack: Vec<String>,
+    pub last_command: Command,
 }
 impl NavContext {
     pub fn new() -> Self {
-        Self { stack: vec![] }
+        Self {
+            stack: vec![],
+            last_command: Command {
+                command: String::new(),
+                source: Source::Queue,
+            },
+        }
     }
 
-    pub fn get_line(&mut self, prompt: impl Display) -> (String, LineSource) {
-        self.stack.pop().map_or_else(
+    pub fn next_command(&mut self, prompt: impl Display) -> &Command {
+        self.last_command = self.stack.pop().map_or_else(
             || {
                 println!("> {prompt}");
                 let line = input_line();
                 print_bar(DEFAULT_BAR_LENGTH);
-                (line, LineSource::User)
+                Command {
+                    command: line,
+                    source: Source::User,
+                }
             },
-            |line| (line.to_string(), LineSource::Queue),
-        )
+            |line| Command {
+                command: line.to_string(),
+                source: Source::Queue,
+            },
+        );
+        &self.last_command
     }
 
     pub fn get_stack(&self) -> &[String] {
@@ -49,10 +68,10 @@ impl NavContext {
     }
 
     pub fn prompt(&self, message: impl Display) {
-        for line in message.to_string().split('\n') {
-            println!("> {line}");
-        }
-        if self.stack.is_empty() {
+        if self.last_command.source == Source::User {
+            for line in message.to_string().split('\n') {
+                println!("> {line}");
+            }
             pause();
         }
     }
@@ -76,7 +95,7 @@ pub fn print_bar(length: usize) {
 
 /// Takes input directly from user.
 ///
-/// If you want to be able to programmatically queue inputs, use `NavContext.get_line()`.
+/// If you want to be able to programmatically queue inputs, use `NavContext.next_command()`.
 pub fn input_line() -> String {
     let mut line = String::new();
     print!("=> ");
@@ -91,14 +110,19 @@ pub fn input_line() -> String {
 ///
 /// This macro will create a new menu context and *automagically* give you the other core macros which bind to this context:
 ///
-/// `pick!`: Asks
+/// `pick!`: Asks the user a question, and gives them a set of choices.
+/// The user picks a choice, the program executes that choice, and moves on.
 /// ```
-/// // Just like menu, but it doesn't loop.
 /// pick!("message" => {
 ///     "option 1" => "action 1"
 ///     "option 2": "description" => "action 2"
 /// });
 /// ```
+///
+/// `nav!`: Works exactly like `pick!`, but instead of moving on, it loops and asks a possibly dynamically generated question forever.
+/// To exit a nav, the user must type "back".
+///
+/// **Note: You can customize the "back" option to do whatever you want.** Just note that it will immediately queue a *back command* before any of yours.
 #[macro_export]
 macro_rules! navigator {
     ($context:ident => $tree:block) => {
@@ -122,9 +146,10 @@ macro_rules! navigator {
                             }),+
                         ];
 
-                        fn error(context: &navigator::NavContext, options: &[String], last_command: &str) {
+                        fn error(context: &navigator::NavContext, options: &[String]) {
                             panic!(
-                                "AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {last_command}\nstack: {:?}\nNote: Read stack in reverse.",
+                                "AUTOMATION ERROR!\nExpected options: {options:?}\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
+								context.last_command.command,
                                 context.stack,
                             );
                         }
@@ -138,8 +163,8 @@ macro_rules! navigator {
                         loop {
                             let mut message = $message.to_string() + &option_str;
 
-                            let (line, source) = $context.get_line(&message);
-                            match line.trim() {
+                            let navigator::Command { command, source } = $context.next_command(&message);
+                            match command.trim() {
                                 $S($option => {
                                     let _: () = $code;
                                     if !$loop || $option == "back" {
@@ -152,14 +177,14 @@ macro_rules! navigator {
                                     if options.is_empty() {
                                         break;
                                     }
-                                    if source == navigator::LineSource::Queue {
-                                        error(&$context, &options, "");
+                                    if *source == navigator::Source::Queue {
+                                        error(&$context, &options);
                                     }
                                     $context.prompt("Please choose an option.");
                                 },
                                 unknown_cmd => {
-                                    if source == navigator::LineSource::Queue {
-                                        error(&$context, &options, unknown_cmd);
+                                    if *source == navigator::Source::Queue {
+                                        error(&$context, &options);
                                     }
                                     $context.prompt("Unrecognized command.");
                                 },
