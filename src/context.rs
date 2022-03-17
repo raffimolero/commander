@@ -21,6 +21,15 @@ pub struct Command {
     pub source: Source,
     pub prompt_level: PromptLevel,
 }
+impl Command {
+    fn new(line: impl Display) -> Self {
+        Self {
+            command: line.to_string(),
+            source: Source::Auto,
+            prompt_level: PromptLevel::Hide,
+        }
+    }
+}
 
 /// Currently just stores an input queue for the menu.
 /// This allows certain menu options to input commands as if you typed them.
@@ -51,17 +60,12 @@ impl NavContext {
 
     pub fn confirm(&mut self, prompt: impl Display, default: Option<bool>) -> bool {
         let hint = default
-            .map(|accept| {
-                format!(
-                    "  (Leave blank for {}.)\n",
-                    if accept { "Yes" } else { "No" }
-                )
-            })
+            .map(|accept| format!(", Enter = {}", if accept { "y" } else { "y" }))
             .unwrap_or_default();
         let out = loop {
             let Command {
                 command, source, ..
-            } = self.next_command(&prompt, format!("{hint}=[y/n]> "));
+            } = self.next_command(&prompt, format!("=[y/n{hint}]> "));
             match command.to_ascii_lowercase().trim() {
                 "y" | "yes" => break true,
                 "n" | "no" => break false,
@@ -91,29 +95,20 @@ impl NavContext {
             }
         };
         self.last_command = self.stack.pop().map_or_else(get_input, |mut line| {
-            let mut cmd = Command {
-                command: line.to_string(),
-                source: Source::Auto,
-                prompt_level: PromptLevel::Hide,
-            };
+            let mut cmd = Command::new(&line);
 
             // ending with a newline means it is an automatic command that must display inputs and prompts.
             if line.contains('\n') {
-                println!("{prompt}");
-                match line.pop() {
+                let suffix = line.pop();
+                line = line.trim().to_string();
+                cmd.command = line;
+                match suffix {
                     // default user input, overrideable.
                     Some('?') => {
-                        cmd = Command {
-                            command: line.trim().to_string(),
-                            source: Source::User,
-                            prompt_level: PromptLevel::Pause,
-                        };
+                        cmd.prompt_level = PromptLevel::Pause;
                         // prompt override.
                         if !Self::new().confirm(
-                            format!(
-                                "\n  Accept? ('No' to override.)\n=[AUTO]> {:?}",
-                                cmd.command
-                            ),
+                            format!("{prompt}\n\n=[AUTO]> [{}], confirm?", cmd.command),
                             Some(true),
                         ) {
                             // overriding will derail the rest of the script.
@@ -123,16 +118,14 @@ impl NavContext {
                     }
                     // show prompts, pause.
                     Some('.') => {
-                        // remove that newline.
-                        cmd.command.pop();
                         cmd.prompt_level = PromptLevel::Pause;
-                        println!("=[AUTO]> {line}");
-                        print_bar(DEFAULT_BAR_LENGTH);
+                        pause(format!("{prompt}\n=[AUTO]> {}", cmd.command));
                     }
                     // show prompts, no pauses.
                     Some('\n') => {
                         cmd.prompt_level = PromptLevel::Show;
-                        println!("=[AUTO]> {line}");
+                        println!("{prompt}");
+                        print!("=[AUTO]> {}", cmd.command);
                         print_bar(DEFAULT_BAR_LENGTH);
                     }
                     _ => self.error(&prompt),
@@ -164,7 +157,7 @@ impl NavContext {
                 println!("> {line}");
             }
             if self.last_command.prompt_level == PromptLevel::Pause {
-                pause("", DEFAULT_PAUSE_PROMPT);
+                pause(DEFAULT_PAUSE_CUE);
             } else {
                 print_bar(DEFAULT_BAR_LENGTH);
             }
