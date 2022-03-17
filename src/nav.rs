@@ -7,8 +7,8 @@
 /// ```
 /// navigator!(ctx => {
 /// 	pick!("message" => {
-/// 	    "option 1" => "action 1"
-/// 	    "option 2": "description" => "action 2"
+/// 		"option 1" => "action 1"
+/// 		"option 2": "description" => "action 2"
 /// 	});
 /// });
 /// ```
@@ -19,91 +19,91 @@
 /// ```
 /// navigator!(ctx => {
 /// 	nav!("message" => {
-/// 	    "option 1" => "action 1"
-/// 	    "option 2": "description" => "action 2"
+/// 		"option 1" => "action 1"
+/// 		"option 2": "description" => "action 2"
 /// 		"exit" => break
 /// 	});
 /// });
 /// ```
 #[macro_export]
 macro_rules! navigator {
-    ($context:ident => $tree:block) => {
-        let mut $context = navigator::context::NavContext::new();
-        macro_rules! dollar_workaround {
-		($S:tt) => {
-			macro_rules! nav {
-				{$message:expr => {
-					$S($option:literal $S(: $description:expr)? => $code:expr)+
-				}} => {
-					nav!(true, $message => {$S($option $S(: $description)? => $code)+})
-				};
-				{$loop:literal, $message:expr => {
-					$S($option:literal $S(: $description:expr)? => $code:expr)+
-				}} => {{
-					loop {
-						let options = vec![
-							$S({
-								#[allow(unused_assignments)]
-								#[allow(unused_mut)]
-								let mut desc = String::new();
-								$S(desc = format!(": {}", $description);)?
-								format!("[{}]{desc}", $option)
-							}),+
-						];
+	($context:ident => $tree:block) => {
+		let mut $context = navigator::context::NavContext::new();
+		macro_rules! dollar_workaround {
+			($S:tt) => {
+				macro_rules! nav {
+					($message:expr => {
+						$S($option:literal $S(: $description:expr)? => $code:expr)+
+					}) => {
+						nav!(true, $message => {$S($option $S(: $description)? => $code)+})
+					};
+					($loop:literal, $message:expr => {
+						$S($option:literal $S(: $description:expr)? => $code:expr)+
+					}) => {
+						loop {
+							let options = vec![
+								$S({
+									#[allow(unused_assignments)]
+									#[allow(unused_mut)]
+									let mut desc = String::new();
+									$S(desc = format!(": {}", $description);)?
+									format!("[{}]{desc}", $option)
+								}),+
+							];
 
-						let option_str = if options.is_empty() {
-							String::new()
-						} else {
-							format!("\n{}\n{}", navigator::helpers::DEFAULT_OPTION_HEADER, &options.join("\n"))
-						};
+							let option_str = if options.is_empty() {
+								String::new()
+							} else {
+								format!("\n{}\n{}", navigator::helpers::DEFAULT_OPTION_HEADER, &options.join("\n"))
+							};
 
-						let message = $message
-							.to_string()
-							.lines()
-							.map(|s| format!("> {s}"))
-							.collect::<Vec<_>>()
-							.join("\n") + &option_str;
+							let message = $message
+								.to_string()
+								.lines()
+								.map(|s| format!("> {s}"))
+								.collect::<Vec<_>>()
+								.join("\n") + &option_str;
 
-						let navigator::context::Command {
-							command, source, ..
-						} = $context.next_command(&message, navigator::helpers::DEFAULT_USER_INPUT_CUE);
-						#[allow(unreachable_patterns)]
-						match command.trim() {
-							$S($option => {
-								let _: () = $code;
-								#[allow(unreachable_code)]
-								if !$loop {
-									break;
-								}
-							})+
-							"" => {
-								if options.is_empty() {
-									break;
-								}
-								if *source == navigator::context::Source::Auto {
-									$context.error(&message);
-								}
-								$context.prompt("Please choose an option.");
-							},
-							_ => {
-								if *source == navigator::context::Source::Auto {
-									$context.error(&message);
-								}
-								$context.prompt("Unrecognized command.");
-							},
-						};
-					}
-				}};
-			}
+							let navigator::context::Command {
+								command, source, ..
+							} = $context.next_command(&message, navigator::helpers::DEFAULT_USER_INPUT_CUE);
+							#[allow(unreachable_patterns)]
+							match command.trim() {
+								$S($option => {
+									let _: () = $code;
+									#[allow(unreachable_code)]
+									if !$loop {
+										break;
+									}
+								})+
+								"" => {
+									if options.is_empty() {
+										break;
+									}
+									if *source == navigator::context::Source::Auto {
+										$context.error(&message);
+									}
+									$context.prompt("Please choose an option.");
+								},
+								_ => {
+									if *source == navigator::context::Source::Auto {
+										$context.error(&message);
+									}
+									$context.prompt("Unrecognized command.");
+								},
+							};
+						}
+					};
+				}
 
-			macro_rules! pick {
-				{$message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}} => {
-					nav!(false, $message => {$S($option $S(: $description)? => $code)+})
-				};
+				macro_rules! pick {
+					($message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}) => {
+						nav!(false, $message => {$S($option $S(: $description)? => $code)+})
+					};
+				}
 			}
 		}
-	}
-	dollar_workaround!($);
-        $tree
-    };
+		dollar_workaround!($);
+		$tree
+	};
 }

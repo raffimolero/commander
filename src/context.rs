@@ -120,6 +120,7 @@ impl NavContext {
                         // remove that newline.
                         cmd.command.pop();
                         cmd.prompt_level = PromptLevel::Pause;
+                        println!("=[AUTO]> {line}");
                         print_bar(DEFAULT_BAR_LENGTH);
                     }
                     // show prompts, no pauses.

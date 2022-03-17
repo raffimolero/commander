@@ -11,6 +11,7 @@ but hey, it'll probably do what i wanted it to do other than, uh, properly and m
 
 # todo
 - actual homework
+- option aliases
 - d o c u m e n t a t i o n
 - refactor the helpers
     - find all the instances of print_bar and see if they can be simplified

@@ -65,10 +65,14 @@ fn main() {
                 let mut canceled = false;
                 pick!("How would you like to take the quiz?" => {
                     "manual" => ctx.prompt("Very well.")
-                    "walkthrough": "Automatically answers the quiz for you." => {
+                    "walkthrough": "Walks you through the quiz." => {
                         // we're just going to steal the answers from each item...
                         // the "\n?" tells the program to let you see the input, and even override it if you want.
                         ctx.execute(test.iter().map(|question| question.answer.to_owned() + "\n?"))
+                    }
+                    "auto": "Automatically answers the quiz for you." => {
+                        // the "\n." tells the program to pause when prompted, but you won't be able to override the script.
+                        ctx.execute(test.iter().map(|question| question.answer.to_owned() + "\n."))
                     }
                     // just "\n" will print the prompts, but you won't pause the program.
                     "a": "Answers 'a' for every question." => ctx.execute(["a\n", "a\n", "a\n", "a\n", "a\n"])
