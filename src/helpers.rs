@@ -3,9 +3,9 @@ use std::{
     io::{stdin, stdout, Write},
 };
 
-pub const DEFAULT_OPTION_HEADER: &'static str = "   -- [ Options ] --";
 pub const DEFAULT_BAR_LENGTH: usize = 32;
-pub const DEFAULT_PAUSE_MESSAGE: &'static str = "Press [Enter] to continue.";
+pub const DEFAULT_OPTION_HEADER: &'static str = "   -- [ Options ] --";
+pub const DEFAULT_PAUSE_PROMPT: &'static str = "=[Enter]>";
 pub const DEFAULT_USER_INPUT_CUE: &'static str = "=> ";
 
 /// Pauses the program to ask for the user's input.

@@ -33,25 +33,22 @@ macro_rules! navigator {
 			($S:tt) => {
 				macro_rules! nav {
 					($message:expr => {
-						$S($option:literal $S(: $description:expr)? => $code:expr)+
+						$S($S($option:literal)|+ $S(: $description:expr)? => $code:expr)+
 					}) => {
-						nav!(true, $message => {$S($option $S(: $description)? => $code)+})
+						nav!(true, $message => {$S($S($option)|+ $S(: $description)? => $code)+})
 					};
 					($loop:literal, $message:expr => {
-						$S($option:literal $S(: $description:expr)? => $code:expr)+
+						$S($S($option:literal)|+ $S(: $description:expr)? => $code:expr)+
 					}) => {
 						loop {
 							let options = vec![
 								$S({
-									#[allow(unused_assignments)]
-									#[allow(unused_mut)]
-									let mut desc = String::new();
-									$S(desc = format!(": {}", $description);)?
-									format!("[{}]{desc}", $option)
+									[$S(format!("[{}]", $option)),+].join(" ")
+										$S(+ &format!(": {}", $description))?
 								}),+
 							];
 
-							let option_str = if options.is_empty() {
+							let prompt = if options.is_empty() {
 								String::new()
 							} else {
 								format!("\n{}\n{}", navigator::helpers::DEFAULT_OPTION_HEADER, &options.join("\n"))
@@ -62,14 +59,14 @@ macro_rules! navigator {
 								.lines()
 								.map(|s| format!("> {s}"))
 								.collect::<Vec<_>>()
-								.join("\n") + &option_str;
+								.join("\n") + &prompt;
 
 							let navigator::context::Command {
 								command, source, ..
 							} = $context.next_command(&message, navigator::helpers::DEFAULT_USER_INPUT_CUE);
 							#[allow(unreachable_patterns)]
 							match command.trim() {
-								$S($option => {
+								$S($S($option)|+ => {
 									let _: () = $code;
 									#[allow(unreachable_code)]
 									if !$loop {
@@ -97,8 +94,8 @@ macro_rules! navigator {
 				}
 
 				macro_rules! pick {
-					($message:expr => {$S($option:literal $S(: $description:expr)? => $code:expr)+}) => {
-						nav!(false, $message => {$S($option $S(: $description)? => $code)+})
+					($message:expr => {$S($S($option:literal)|+ $S(: $description:expr)? => $code:expr)+}) => {
+						nav!(false, $message => {$S($S($option)|+ $S(: $description)? => $code)+})
 					};
 				}
 			}

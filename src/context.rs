@@ -50,15 +50,18 @@ impl NavContext {
     }
 
     pub fn confirm(&mut self, prompt: impl Display, default: Option<bool>) -> bool {
-        let cue = match default {
-            Some(true) => "n?",
-            Some(false) => "y?",
-            None => "y/n",
-        };
+        let hint = default
+            .map(|accept| {
+                format!(
+                    "  (Leave blank for {}.)\n",
+                    if accept { "Yes" } else { "No" }
+                )
+            })
+            .unwrap_or_default();
         let out = loop {
             let Command {
                 command, source, ..
-            } = self.next_command(&prompt, format!("=[{cue}]> "));
+            } = self.next_command(&prompt, format!("{hint}=[y/n]> "));
             match command.to_ascii_lowercase().trim() {
                 "y" | "yes" => break true,
                 "n" | "no" => break false,
@@ -107,7 +110,10 @@ impl NavContext {
                         };
                         // prompt override.
                         if !Self::new().confirm(
-                            format!("\nAccept? ('No' to override.)\n=[AUTO]> {:?}", cmd.command),
+                            format!(
+                                "\n  Accept? ('No' to override.)\n=[AUTO]> {:?}",
+                                cmd.command
+                            ),
                             Some(true),
                         ) {
                             // overriding will derail the rest of the script.
@@ -158,7 +164,7 @@ impl NavContext {
                 println!("> {line}");
             }
             if self.last_command.prompt_level == PromptLevel::Pause {
-                pause(DEFAULT_PAUSE_MESSAGE, DEFAULT_USER_INPUT_CUE);
+                pause("", DEFAULT_PAUSE_PROMPT);
             } else {
                 print_bar(DEFAULT_BAR_LENGTH);
             }
