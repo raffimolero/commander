@@ -29,6 +29,64 @@ impl Command {
             prompt_level: PromptLevel::Hide,
         }
     }
+
+    fn from_user(prompt: impl Display, cue: impl Display) -> Self {
+        println!("{prompt}");
+        let line = input_line(&cue);
+        print_bar(DEFAULT_BAR_LENGTH);
+        Command {
+            command: line,
+            source: Source::User,
+            prompt_level: PromptLevel::Pause,
+        }
+    }
+
+    fn from_auto(
+        ctx: &mut NavContext,
+        mut line: String,
+        prompt: impl Display,
+        cue: impl Display,
+    ) -> Self {
+        let mut cmd = Command::new(&line);
+
+        // ending with a newline means it is an automatic command that must display inputs and prompts.
+        if !line.contains('\n') {
+            return cmd;
+        }
+        let suffix = line.pop();
+        line = line.trim().to_string();
+        cmd.command = line;
+        match suffix {
+            // default user input, overrideable.
+            Some('?') => {
+                cmd.prompt_level = PromptLevel::Pause;
+                // prompt override.
+                if !NavContext::new().confirm(
+                    format!("{prompt}\n\nConfirm input: [{}]", cmd.command),
+                    Some(true),
+                ) {
+                    // overriding will derail the rest of the script.
+                    ctx.stack.clear();
+                    cmd = Self::from_user(prompt, cue);
+                }
+            }
+            // show prompts, pause.
+            Some('.') => {
+                cmd.prompt_level = PromptLevel::Pause;
+                pause(format!("{prompt}\n=[AUTO]> {}", cmd.command));
+            }
+            // show prompts, no pauses.
+            Some('\n') => {
+                cmd.prompt_level = PromptLevel::Show;
+                println!("{prompt}");
+                print!("=[AUTO]> {}", cmd.command);
+                print_bar(DEFAULT_BAR_LENGTH);
+            }
+            _ => ctx.error(&prompt),
+        }
+
+        cmd
+    }
 }
 
 /// Currently just stores an input queue for the menu.
@@ -84,56 +142,10 @@ impl NavContext {
     }
 
     pub fn next_command(&mut self, prompt: impl Display, cue: impl Display) -> &Command {
-        let get_input = || {
-            println!("{prompt}");
-            let line = input_line(&cue);
-            print_bar(DEFAULT_BAR_LENGTH);
-            Command {
-                command: line,
-                source: Source::User,
-                prompt_level: PromptLevel::Pause,
-            }
-        };
-        self.last_command = self.stack.pop().map_or_else(get_input, |mut line| {
-            let mut cmd = Command::new(&line);
-
-            // ending with a newline means it is an automatic command that must display inputs and prompts.
-            if line.contains('\n') {
-                let suffix = line.pop();
-                line = line.trim().to_string();
-                cmd.command = line;
-                match suffix {
-                    // default user input, overrideable.
-                    Some('?') => {
-                        cmd.prompt_level = PromptLevel::Pause;
-                        // prompt override.
-                        if !Self::new().confirm(
-                            format!("{prompt}\n\nConfirm input: [{}]", cmd.command),
-                            Some(true),
-                        ) {
-                            // overriding will derail the rest of the script.
-                            self.stack.clear();
-                            cmd = get_input();
-                        }
-                    }
-                    // show prompts, pause.
-                    Some('.') => {
-                        cmd.prompt_level = PromptLevel::Pause;
-                        pause(format!("{prompt}\n=[AUTO]> {}", cmd.command));
-                    }
-                    // show prompts, no pauses.
-                    Some('\n') => {
-                        cmd.prompt_level = PromptLevel::Show;
-                        println!("{prompt}");
-                        print!("=[AUTO]> {}", cmd.command);
-                        print_bar(DEFAULT_BAR_LENGTH);
-                    }
-                    _ => self.error(&prompt),
-                }
-            }
-
-            cmd
-        });
+        self.last_command = self.stack.pop().map_or_else(
+            || Command::from_user(&prompt, &cue),
+            |line| Command::from_auto(self, line, &prompt, &cue),
+        );
         &self.last_command
     }
 
