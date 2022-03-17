@@ -5,29 +5,29 @@ fn main() {
 
     navigator::navigator!(ctx => {
         pick!("pick one" => {
-            "auto" => ctx.execute(["a", "c", "b"])
+            "auto" => ctx.execute(["a\n?", "c\n.", "b\n", "d"])
+            "no" => break
         });
 
-        pick!("pick one" => {
-            "a" => ctx.prompt("a")
-            "b" => ctx.prompt("b")
-            "c" => ctx.prompt("c")
-        });
-        pick!("pick one" => {
-            "a" => ctx.prompt("a")
-            "b" => ctx.prompt("b")
-            "c" => ctx.prompt("c")
-        });
-        pick!("pick one" => {
-            "a" => ctx.prompt("a")
-            "b" => ctx.prompt("b")
-            "c" => ctx.prompt("c")
-        });
+        for _ in 0..4 {
+            pick!("pick one" => {
+                "a" => ctx.prompt("a")
+                "b" => ctx.prompt("b")
+                "c" => ctx.prompt("c")
+                "d" => ctx.prompt("d")
+            });
+        }
 
         nav!("Welcome!" => {
             "test" => nav!("Testing." => {
-                "cancel" => ctx.prompt("ok")
-                "back": "Goes back" => ctx.prompt("Backing out...")
+                "cancel" => {
+                    ctx.prompt("ok");
+                    break;
+                }
+                "back": "Goes back" => {
+                    ctx.prompt("Backing out...");
+                    break;
+                }
             })
             "" => ctx.prompt("What?")
             "print": "prints stuff" => pick!("Print what?" => {
@@ -40,6 +40,7 @@ fn main() {
                 }
                 "quit": "quit program." => ctx.execute(["break", "break"])
             })
+            "back" => break
         });
 
         nav!("Hello there" => {
@@ -54,6 +55,7 @@ fn main() {
                     // ctx.prompt(num);
                 }
             })
+            "back" => break
         });
 
         ctx.prompt("Goodbye!");
