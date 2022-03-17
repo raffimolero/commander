@@ -5,16 +5,26 @@
 /// `pick!`: Asks the user a question, and gives them a set of choices.
 /// The user picks a choice, the program executes that choice, and moves on.
 /// ```
-/// pick!("message" => {
-///     "option 1" => "action 1"
-///     "option 2": "description" => "action 2"
+/// navigator!(ctx => {
+/// 	pick!("message" => {
+/// 	    "option 1" => "action 1"
+/// 	    "option 2": "description" => "action 2"
+/// 	});
 /// });
 /// ```
 ///
 /// `nav!`: Works exactly like `pick!`, but instead of moving on, it loops and asks a possibly dynamically generated question forever.
-/// To exit a nav, the user must type "break".
+/// To exit a nav, the program must provide an option that will "break".
 ///
-/// **Note: You can customize the "break" option to do whatever you want.** Just note that it will immediately queue a *break command* before any of yours.
+/// ```
+/// navigator!(ctx => {
+/// 	nav!("message" => {
+/// 	    "option 1" => "action 1"
+/// 	    "option 2": "description" => "action 2"
+/// 		"exit" => break
+/// 	});
+/// });
+/// ```
 #[macro_export]
 macro_rules! navigator {
     ($context:ident => $tree:block) => {
@@ -30,23 +40,23 @@ macro_rules! navigator {
 				{$loop:literal, $message:expr => {
 					$S($option:literal $S(: $description:expr)? => $code:expr)+
 				}} => {{
-					let options = vec![
-						$S({
-							#[allow(unused_assignments)]
-							#[allow(unused_mut)]
-							let mut desc = String::new();
-							$S(desc = format!(": {}", $description);)?
-							format!("[{}]{desc}", $option)
-						}),+
-					];
-
-					let option_str = if options.is_empty() {
-						String::new()
-					} else {
-						format!("\n -- [ Options ] --\n{}", &options.join("\n"))
-					};
-
 					loop {
+						let options = vec![
+							$S({
+								#[allow(unused_assignments)]
+								#[allow(unused_mut)]
+								let mut desc = String::new();
+								$S(desc = format!(": {}", $description);)?
+								format!("[{}]{desc}", $option)
+							}),+
+						];
+
+						let option_str = if options.is_empty() {
+							String::new()
+						} else {
+							format!("\n{}\n{}", navigator::helpers::DEFAULT_OPTION_HEADER, &options.join("\n"))
+						};
+
 						let message = $message
 							.to_string()
 							.lines()
@@ -54,16 +64,18 @@ macro_rules! navigator {
 							.collect::<Vec<_>>()
 							.join("\n") + &option_str;
 
-						let navigator::context::Command { command, source, .. } = $context.next_command(&message);
+						let navigator::context::Command {
+							command, source, ..
+						} = $context.next_command(&message, navigator::helpers::DEFAULT_USER_INPUT_CUE);
 						#[allow(unreachable_patterns)]
 						match command.trim() {
 							$S($option => {
 								let _: () = $code;
-								if !$loop || $option == "break" {
+								#[allow(unreachable_code)]
+								if !$loop {
 									break;
 								}
 							})+
-							"break" => break,
 							"" => {
 								if options.is_empty() {
 									break;

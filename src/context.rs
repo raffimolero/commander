@@ -27,8 +27,8 @@ pub struct Command {
 #[derive(Debug)]
 pub struct NavContext {
     // path: Vec<String>,
-    pub stack: Vec<String>,
     pub last_command: Command,
+    pub stack: Vec<String>,
 }
 impl NavContext {
     pub fn new() -> Self {
@@ -37,24 +37,49 @@ impl NavContext {
             last_command: Command {
                 command: String::new(),
                 source: Source::Auto,
-                prompt_level: PromptLevel::Hide,
+                prompt_level: PromptLevel::Pause,
             },
         }
     }
 
     /// only reason it's public is cause macros.
-    pub fn error(&self, options: impl Display) {
+    pub fn error(&self, prompt: impl Display) {
         panic!(
-			"AUTOMATION ERROR!\nExpected options: {options}\nLast command: {}\nstack: {:?}\nNote: Read stack in reverse.",
-			self.last_command.command,
-			self.stack,
+			"AUTOMATION ERROR!\nPrompt:\n{prompt}\n\nContext: {self:#?}\nNote: Read NavContext's stack in reverse.",
 		);
     }
 
-    pub fn next_command(&mut self, prompt: impl Display) -> &Command {
+    pub fn confirm(&mut self, prompt: impl Display, default: Option<bool>) -> bool {
+        let cue = match default {
+            Some(true) => "n?",
+            Some(false) => "y?",
+            None => "y/n",
+        };
+        let out = loop {
+            let Command {
+                command, source, ..
+            } = self.next_command(&prompt, format!("=[{cue}]> "));
+            match command.to_ascii_lowercase().trim() {
+                "y" | "yes" => break true,
+                "n" | "no" => break false,
+                "" => {
+                    if let Some(out) = default {
+                        break out;
+                    }
+                }
+                _ => {}
+            }
+            if *source == Source::Auto {
+                self.error(&prompt);
+            }
+        };
+        out
+    }
+
+    pub fn next_command(&mut self, prompt: impl Display, cue: impl Display) -> &Command {
         let get_input = || {
             println!("{prompt}");
-            let line = input_line(DEFAULT_USER_INPUT_CUE);
+            let line = input_line(&cue);
             print_bar(DEFAULT_BAR_LENGTH);
             Command {
                 command: line,
@@ -81,18 +106,14 @@ impl NavContext {
                             prompt_level: PromptLevel::Pause,
                         };
                         // prompt override.
-                        use crate as navigator;
-                        crate::navigator!(ctx => {
-                            println!();
-                            pick!(format!("Scripted user input: {:?}\nAccept?", cmd.command) => {
-                                "": format!("Accept input: [{}]", cmd.command) => {}
-                                "yes" => {}
-                                "cancel": "Make your own inputs." => {
-                                    self.stack.clear();
-                                    cmd = get_input();
-                                }
-                            });
-                        });
+                        if !Self::new().confirm(
+                            format!("\nAccept? ('No' to override.)\n=[AUTO]> {:?}", cmd.command),
+                            Some(true),
+                        ) {
+                            // overriding will derail the rest of the script.
+                            self.stack.clear();
+                            cmd = get_input();
+                        }
                     }
                     // show prompts, pause.
                     Some('.') => {
