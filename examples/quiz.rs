@@ -61,14 +61,18 @@ fn main() {
 
         let mut taken = false;
         nav!(if taken { "Welcome back!" } else { "What would you like to do?" } => {
-            "quiz": format!("Take the quiz{}.", if taken { " again" } else { "" }) => {
+            "quiz" | "q": format!("Take the quiz{}.", if taken { " again" } else { "" }) => {
                 let mut canceled = false;
                 pick!("How would you like to take the quiz?" => {
-                    "manual" => ctx.prompt("Very well.")
-                    "walkthrough": "Automatically answers the quiz for you." => {
+                    "manual" | "m" => ctx.prompt("Very well.")
+                    "walkthrough" | "w": "Walks you through the quiz." => {
                         // we're just going to steal the answers from each item...
                         // the "\n?" tells the program to let you see the input, and even override it if you want.
                         ctx.execute(test.iter().map(|question| question.answer.to_owned() + "\n?"))
+                    }
+                    "auto": "Automatically answers the quiz for you." => {
+                        // the "\n." tells the program to pause when prompted, but you won't be able to override the script.
+                        ctx.execute(test.iter().map(|question| question.answer.to_owned() + "\n."))
                     }
                     // just "\n" will print the prompts, but you won't pause the program.
                     "a": "Answers 'a' for every question." => ctx.execute(["a\n", "a\n", "a\n", "a\n", "a\n"])
@@ -77,10 +81,10 @@ fn main() {
                         ctx.prompt("Cancelled.");
                     }
                 });
-
                 if canceled {
                     continue;
                 }
+
                 taken = true;
                 let mut score = 0;
                 for Question { question, choices: [a, b, c, d], answer } in test.iter() {
@@ -101,7 +105,7 @@ fn main() {
                 }
                 ctx.prompt(format!("Quiz finished!\nYou got {score} out of 5 questions right."));
             }
-            "exit": "Exits the program." => break
+            "exit" | "x": "Exits the program." => break
         });
         ctx.prompt("Goodbye!");
     });

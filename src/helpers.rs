@@ -3,15 +3,14 @@ use std::{
     io::{stdin, stdout, Write},
 };
 
-pub const DEFAULT_OPTION_HEADER: &'static str = "   -- [ Options ] --";
 pub const DEFAULT_BAR_LENGTH: usize = 32;
-pub const DEFAULT_PAUSE_MESSAGE: &'static str = "Press [Enter] to continue.";
+pub const DEFAULT_OPTION_HEADER: &'static str = "  -- [ Options ] --";
+pub const DEFAULT_PAUSE_CUE: &'static str = "=[Enter]> ";
 pub const DEFAULT_USER_INPUT_CUE: &'static str = "=> ";
 
-/// Pauses the program to ask for the user's input.
-pub fn pause(message: impl Display, cue: impl Display) {
+/// Pauses the program. The user will continue with Enter.
+pub fn pause(cue: impl Display) {
     loop {
-        println!("{message}");
         if input_line(&cue).trim().is_empty() {
             break;
         }
