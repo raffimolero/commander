@@ -4,7 +4,7 @@ use std::{
 };
 
 pub const DEFAULT_BAR_LENGTH: usize = 32;
-pub const DEFAULT_OPTION_HEADER: &'static str = "   -- [ Options ] --";
+pub const DEFAULT_OPTION_HEADER: &'static str = "  -- [ Options ] --";
 pub const DEFAULT_PAUSE_CUE: &'static str = "=[Enter]> ";
 pub const DEFAULT_USER_INPUT_CUE: &'static str = "=> ";
 

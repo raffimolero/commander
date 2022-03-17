@@ -41,17 +41,21 @@ macro_rules! navigator {
 						$S($S($option:literal)|+ $S(: $description:expr)? => $code:expr)+
 					}) => {
 						loop {
-							let options = vec![
-								$S({
-									[$S(format!("[{}]", $option)),+].join(" ")
-										$S(+ &format!(": {}", $description))?
-								}),+
-							];
+							let options = vec![$S(
+								[
+									$S(format!("[{}]", $option)),+
+								].join(" ")
+									$S(+ &format!(": {}", $description))?
+							),+];
 
 							let prompt = if options.is_empty() {
 								String::new()
 							} else {
-								format!("\n{}\n{}", navigator::helpers::DEFAULT_OPTION_HEADER, &options.join("\n"))
+								format!(
+									"\n{}\n{}",
+									navigator::helpers::DEFAULT_OPTION_HEADER,
+									options.join("\n")
+								)
 							};
 
 							let message = $message
@@ -59,7 +63,8 @@ macro_rules! navigator {
 								.lines()
 								.map(|s| format!("> {s}"))
 								.collect::<Vec<_>>()
-								.join("\n") + &prompt;
+								.join("\n")
+								+ &prompt;
 
 							let navigator::context::Command {
 								command, source, ..

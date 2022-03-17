@@ -108,7 +108,7 @@ impl NavContext {
                         cmd.prompt_level = PromptLevel::Pause;
                         // prompt override.
                         if !Self::new().confirm(
-                            format!("{prompt}\n\n=[AUTO]> [{}], confirm?", cmd.command),
+                            format!("{prompt}\n\nConfirm input: [{}]", cmd.command),
                             Some(true),
                         ) {
                             // overriding will derail the rest of the script.
