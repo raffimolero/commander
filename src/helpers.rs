@@ -10,9 +10,10 @@ pub const DEFAULT_USER_INPUT_CUE: &'static str = "=> ";
 
 /// Pauses the program. The user will continue with Enter.
 pub fn pause(cue: impl Display) {
-    loop {
-        if input_line(&cue).trim().is_empty() {
-            break;
+    let multiline = cue.to_string().contains('\n');
+    while !input_line(&cue).trim().is_empty() {
+        if multiline {
+            print_bar(DEFAULT_BAR_LENGTH);
         }
     }
     print_bar(DEFAULT_BAR_LENGTH);

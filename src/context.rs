@@ -60,11 +60,12 @@ impl Command {
             // default user input, overrideable.
             Some('?') => {
                 cmd.prompt_level = PromptLevel::Pause;
+                println!("{prompt}\n");
                 // prompt override.
-                if !NavContext::new().confirm(
-                    format!("{prompt}\n\nConfirm input: [{}]", cmd.command),
-                    Some(true),
-                ) {
+                // TODO: make it so confirm doesn't print a bar every time the cue is given.
+                if !NavContext::new()
+                    .confirm(format!("Confirm input: [{}]", cmd.command), Some(true))
+                {
                     // overriding will derail the rest of the script.
                     ctx.stack.clear();
                     cmd = Self::from_user(prompt, cue);
@@ -73,7 +74,8 @@ impl Command {
             // show prompts, pause.
             Some('.') => {
                 cmd.prompt_level = PromptLevel::Pause;
-                pause(format!("{prompt}\n=[AUTO]> {}", cmd.command));
+                println!("{prompt}");
+                pause(format!("=[AUTO]> {} ", cmd.command));
             }
             // show prompts, no pauses.
             Some('\n') => {
@@ -82,7 +84,7 @@ impl Command {
                 print!("=[AUTO]> {}", cmd.command);
                 print_bar(DEFAULT_BAR_LENGTH);
             }
-            _ => ctx.error(&prompt),
+            _ => ctx.panic(&prompt),
         }
 
         cmd
@@ -110,7 +112,7 @@ impl NavContext {
     }
 
     /// only reason it's public is cause macros.
-    pub fn error(&self, prompt: impl Display) {
+    pub fn panic(&self, prompt: impl Display) {
         panic!(
 			"AUTOMATION ERROR!\nPrompt:\n{prompt}\n\nContext: {self:#?}\nNote: Read NavContext's stack in reverse.",
 		);
@@ -135,7 +137,7 @@ impl NavContext {
                 _ => {}
             }
             if *source == Source::Auto {
-                self.error(&prompt);
+                self.panic(&prompt);
             }
         };
         out
