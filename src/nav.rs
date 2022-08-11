@@ -44,7 +44,7 @@ macro_rules! navigator {
 							let options = vec![$S(
 								[
 									$S(format!("[{}]", $option)),+
-								].join(" ")
+								].join("")
 									$S(+ &format!(": {}", $description))?
 							),+];
 

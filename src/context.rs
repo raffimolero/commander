@@ -81,7 +81,7 @@ impl Command {
             Some('\n') => {
                 cmd.prompt_level = PromptLevel::Show;
                 println!("{prompt}");
-                print!("=[AUTO]> {}", cmd.command);
+                println!("=[AUTO]> {}", cmd.command);
                 print_bar(DEFAULT_BAR_LENGTH);
             }
             _ => ctx.panic(&prompt),
@@ -120,7 +120,7 @@ impl NavContext {
 
     pub fn confirm(&mut self, prompt: impl Display, default: Option<bool>) -> bool {
         let hint = default
-            .map(|accept| format!(", Enter = {}", if accept { "y" } else { "y" }))
+            .map(|accept| format!(", Enter = {}", if accept { "y" } else { "n" }))
             .unwrap_or_default();
         let out = loop {
             let Command {
