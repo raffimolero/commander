@@ -44,7 +44,7 @@ macro_rules! navigator {
 							let options = vec![$S(
 								[
 									$S(format!("[{}]", $option)),+
-								].join(" ")
+								].join("")
 									$S(+ &format!(": {}", $description))?
 							),+];
 
@@ -79,17 +79,14 @@ macro_rules! navigator {
 									}
 								})+
 								"" => {
-									if options.is_empty() {
-										break;
-									}
+									assert!(!options.is_empty(), "How did you even make it without options");
 									if *source == navigator::context::Source::Auto {
-										$context.error(&message);
+										$context.panic(&message);
 									}
-									$context.prompt("Please choose an option.");
 								},
 								_ => {
 									if *source == navigator::context::Source::Auto {
-										$context.error(&message);
+										$context.panic(&message);
 									}
 									$context.prompt("Unrecognized command.");
 								},
